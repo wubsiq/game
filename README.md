@@ -2,7 +2,7 @@
 
 欢迎来到经典HTML小游戏合集！这是一个精心打造的游戏宝库，包含16款纯前端实现的经典游戏。无需安装，离线可玩，让你随时随地享受游戏的乐趣。
 
-部署在了cloudflare，网站地址如下：b8f4dda9.game-5kj.pages.dev
+部署在了cloudflare，网站地址如下：[b8f4dda9.game-5kj.pages.dev]b8f4dda9.game-5kj.pages.dev
 
 ---
 
