@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>井字棋游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            margin: 20px 0;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 10px;
+            margin: 20px 0;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: white;
+            border: 2px solid #333;
+            font-size: 2.5em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .cell:hover {
+            background-color: #e0e0e0;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .exit-button, .reset-button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .exit-button:hover, .reset-button:hover {
+            background-color: #d32f2f;
+        }
+        .reset-button {
+            background-color: #2196F3;
+        }
+        .reset-button:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>井字棋游戏</h1>
+    
+    <div class="game-info" id="status">玩家 X 的回合</div>
+    
+    <div class="game-board" id="board">
+        <div class="cell" onclick="makeMove(0)"></div>
+        <div class="cell" onclick="makeMove(1)"></div>
+        <div class="cell" onclick="makeMove(2)"></div>
+        <div class="cell" onclick="makeMove(3)"></div>
+        <div class="cell" onclick="makeMove(4)"></div>
+        <div class="cell" onclick="makeMove(5)"></div>
+        <div class="cell" onclick="makeMove(6)"></div>
+        <div class="cell" onclick="makeMove(7)"></div>
+        <div class="cell" onclick="makeMove(8)"></div>
+    </div>
+    
+    <div class="controls">
+        <button class="reset-button" onclick="resetGame()">重新开始</button>
+        <button class="exit-button" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        let currentPlayer = 'X';
+        let gameBoard = ['', '', '', '', '', '', '', '', ''];
+        let gameActive = true;
+
+        function makeMove(cellIndex) {
+            if (gameBoard[cellIndex] !== '' || !gameActive) return;
+            
+            gameBoard[cellIndex] = currentPlayer;
+            document.getElementsByClassName('cell')[cellIndex].textContent = currentPlayer;
+            
+            if (checkWin()) {
+                document.getElementById('status').textContent = `玩家 ${currentPlayer} 获胜！`;
+                gameActive = false;
+                return;
+            }
+            
+            if (checkDraw()) {
+                document.getElementById('status').textContent = '平局！';
+                gameActive = false;
+                return;
+            }
+            
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            document.getElementById('status').textContent = `玩家 ${currentPlayer} 的回合`;
+        }
+
+        function checkWin() {
+            const winPatterns = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // 行
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // 列
+                [0, 4, 8], [2, 4, 6]             // 对角线
+            ];
+            
+            return winPatterns.some(pattern => {
+                const [a, b, c] = pattern;
+                return gameBoard[a] !== '' && gameBoard[a] === gameBoard[b] && gameBoard[a] === gameBoard[c];
+            });
+        }
+
+        function checkDraw() {
+            return gameBoard.every(cell => cell !== '');
+        }
+
+        function resetGame() {
+            currentPlayer = 'X';
+            gameBoard = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            document.getElementById('status').textContent = '玩家 X 的回合';
+            
+            const cells = document.getElementsByClassName('cell');
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].textContent = '';
+            }
+        }
+
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
