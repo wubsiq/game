@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .sudoku-board {
+            display: grid;
+            grid-template-columns: repeat(9, 50px);
+            grid-gap: 1px;
+            margin: 20px 0;
+            background-color: #333;
+            border: 2px solid #333;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .cell.fixed {
+            background-color: #e0e0e0;
+        }
+        .cell.selected {
+            background-color: #bbdefb;
+        }
+        .cell.error {
+            color: red;
+        }
+        .thick-right {
+            border-right: 2px solid #333;
+        }
+        .thick-bottom {
+            border-bottom: 2px solid #333;
+        }
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-gap: 5px;
+            margin: 20px 0;
+        }
+        .number-btn {
+            width: 50px;
+            height: 50px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .number-btn:hover {
+            background-color: #45a049;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>数独游戏</h1>
+    
+    <div class="game-info">
+        <div>时间: <span id="timer">0</span>s</div>
+        <div>错误: <span id="errors">0</span></div>
+    </div>
+    
+    <div class="sudoku-board" id="board"></div>
+    
+    <div class="number-pad">
+        <button class="number-btn" onclick="inputNumber(1)">1</button>
+        <button class="number-btn" onclick="inputNumber(2)">2</button>
+        <button class="number-btn" onclick="inputNumber(3)">3</button>
+        <button class="number-btn" onclick="inputNumber(4)">4</button>
+        <button class="number-btn" onclick="inputNumber(5)">5</button>
+        <button class="number-btn" onclick="inputNumber(6)">6</button>
+        <button class="number-btn" onclick="inputNumber(7)">7</button>
+        <button class="number-btn" onclick="inputNumber(8)">8</button>
+        <button class="number-btn" onclick="inputNumber(9)">9</button>
+        <button class="number-btn" onclick="clearCell()">清除</button>
+    </div>
+    
+    <div class="instructions">
+        <p>填充空格，使每行、每列和每个3x3区域都包含1-9的数字，且不重复。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="newGame()">新游戏</button>
+        <button class="btn" onclick="checkSolution()">检查</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let board = [];
+        let solution = [];
+        let startTime = null;
+        let timerInterval = null;
+        let errors = 0;
+        let selectedCell = null;
+        
+        // 预定义的数独题目（简单级别）
+        const puzzles = [
+            {
+                puzzle: [
+                    [5, 3, 0, 0, 7, 0, 0, 0, 0],
+                    [6, 0, 0, 1, 9, 5, 0, 0, 0],
+                    [0, 9, 8, 0, 0, 0, 0, 6, 0],
+                    [8, 0, 0, 0, 6, 0, 0, 0, 3],
+                    [4, 0, 0, 8, 0, 3, 0, 0, 1],
+                    [7, 0, 0, 0, 2, 0, 0, 0, 6],
+                    [0, 6, 0, 0, 0, 0, 2, 8, 0],
+                    [0, 0, 0, 4, 1, 9, 0, 0, 5],
+                    [0, 0, 0, 0, 8, 0, 0, 7, 9]
+                ],
+                solution: [
+                    [5, 3, 4, 6, 7, 8, 9, 1, 2],
+                    [6, 7, 2, 1, 9, 5, 3, 4, 8],
+                    [1, 9, 8, 3, 4, 2, 5, 6, 7],
+                    [8, 5, 9, 7, 6, 1, 4, 2, 3],
+                    [4, 2, 6, 8, 5, 3, 7, 9, 1],
+                    [7, 1, 3, 9, 2, 4, 8, 5, 6],
+                    [9, 6, 1, 5, 3, 7, 2, 8, 4],
+                    [2, 8, 7, 4, 1, 9, 6, 3, 5],
+                    [3, 4, 5, 2, 8, 6, 1, 7, 9]
+                ]
+            }
+        ];
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            errors = 0;
+            document.getElementById('errors').textContent = errors;
+            document.getElementById('timer').textContent = '0';
+            selectedCell = null;
+            
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // 选择一个随机题目
+            const puzzleIndex = Math.floor(Math.random() * puzzles.length);
+            const puzzle = puzzles[puzzleIndex];
+            
+            // 初始化游戏板和解
+            board = JSON.parse(JSON.stringify(puzzle.puzzle));
+            solution = JSON.parse(JSON.stringify(puzzle.solution));
+            
+            // 开始计时
+            startTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // 添加粗边框
+                    if (j === 2 || j === 5) {
+                        cell.classList.add('thick-right');
+                    }
+                    if (i === 2 || i === 5) {
+                        cell.classList.add('thick-bottom');
+                    }
+                    
+                    // 如果是固定数字（非0），添加fixed类
+                    if (board[i][j] !== 0) {
+                        cell.classList.add('fixed');
+                        cell.textContent = board[i][j];
+                    }
+                    
+                    // 添加点击事件
+                    cell.addEventListener('click', () => selectCell(i, j));
+                    
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        // 选择单元格
+        function selectCell(row, col) {
+            // 如果是固定数字，不能选择
+            if (board[row][col] !== 0 && document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`).classList.contains('fixed')) {
+                return;
+            }
+            
+            // 取消之前选择的单元格
+            if (selectedCell) {
+                document.querySelector(`.cell[data-row="${selectedCell.row}"][data-col="${selectedCell.col}"]`).classList.remove('selected');
+            }
+            
+            // 选择新单元格
+            selectedCell = {row, col};
+            document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`).classList.add('selected');
+        }
+        
+        // 输入数字
+        function inputNumber(number) {
+            if (!selectedCell) return;
+            
+            const {row, col} = selectedCell;
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            
+            // 更新游戏板
+            board[row][col] = number;
+            cell.textContent = number;
+            
+            // 检查是否正确
+            if (number !== solution[row][col]) {
+                cell.classList.add('error');
+                errors++;
+                document.getElementById('errors').textContent = errors;
+            } else {
+                cell.classList.remove('error');
+            }
+            
+            // 检查是否完成
+            checkCompletion();
+        }
+        
+        // 清除单元格
+        function clearCell() {
+            if (!selectedCell) return;
+            
+            const {row, col} = selectedCell;
+            const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+            
+            // 只能清除非固定数字
+            if (!cell.classList.contains('fixed')) {
+                board[row][col] = 0;
+                cell.textContent = '';
+                cell.classList.remove('error');
+            }
+        }
+        
+        // 检查是否完成
+        function checkCompletion() {
+            // 检查是否所有单元格都已填写且正确
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    if (board[i][j] === 0 || board[i][j] !== solution[i][j]) {
+                        return;
+                    }
+                }
+            }
+            
+            // 完成游戏
+            clearInterval(timerInterval);
+            setTimeout(() => {
+                alert(`恭喜你完成数独！用时${document.getElementById('timer').textContent}秒，错误${errors}次。`);
+            }, 100);
+        }
+        
+        // 检查解决方案
+        function checkSolution() {
+            let correct = true;
+            
+            // 检查每个单元格
+            for (let i = 0; i < 9; i++) {
+                for (let j = 0; j < 9; j++) {
+                    const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                    
+                    // 只检查非固定单元格
+                    if (!cell.classList.contains('fixed')) {
+                        if (board[i][j] !== 0 && board[i][j] !== solution[i][j]) {
+                            cell.classList.add('error');
+                            correct = false;
+                        } else {
+                            cell.classList.remove('error');
+                        }
+                    }
+                }
+            }
+            
+            if (correct) {
+                alert('所有已填写的数字都是正确的！');
+            } else {
+                alert('有些数字不正确，请检查。');
+            }
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timer').textContent = elapsed;
+        }
+        
+        // 新游戏
+        function newGame() {
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            initGame();
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

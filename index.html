@@ -7,12 +7,21 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            padding: 20px;
             background-color: #f0f0f0;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        
+        .games-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
         }
         .card {
             width: 300px;
@@ -52,10 +61,103 @@
     </style>
 </head>
 <body>
-    <div class="card" onclick="location.href='Tic-Tac-Toe.html'">
-        <h2>井字棋游戏</h2>
-        <p>经典双人对战游戏</p>
-        <button class="play-button">开始游戏</button>
+    <h1>游戏大厅</h1>
+    <div class="games-container">
+        <div class="card" onclick="location.href='Tic-Tac-Toe.html'">
+            <h2>井字棋游戏</h2>
+            <p>经典双人对战游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='snake-game.html'">
+            <h2>贪吃蛇游戏</h2>
+            <p>经典的贪吃蛇游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='minesweeper.html'">
+            <h2>扫雷游戏</h2>
+            <p>挑战你的逻辑思维</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='2048.html'">
+            <h2>2048数字游戏</h2>
+            <p>合成2048数字方块</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='puzzle.html'">
+            <h2>拼图游戏</h2>
+            <p>经典数字拼图挑战</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='memory.html'">
+            <h2>记忆翻牌游戏</h2>
+            <p>考验记忆力的配对游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='rock-paper-scissors.html'">
+            <h2>石头剪刀布游戏</h2>
+            <p>与电脑进行猜拳对决</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='sudoku.html'">
+            <h2>数独游戏</h2>
+            <p>经典数字逻辑游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='lianliankan.html'">
+            <h2>连连看游戏</h2>
+            <p>消除相同图案的连线游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='gomoku.html'">
+            <h2>五子棋游戏</h2>
+            <p>黑白双方争夺五子连线</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='breakout.html'">
+            <h2>打砖块游戏</h2>
+            <p>反弹小球击碎砖块</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='jump.html'">
+            <h2>跳一跳游戏</h2>
+            <p>精准跳跃挑战</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='huarongdao.html'">
+            <h2>华容道游戏</h2>
+            <p>移动方块解谜游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='sokoban.html'">
+            <h2>推箱子游戏</h2>
+            <p>推动箱子到指定位置</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='airplane-battle.html'">
+            <h2>飞机大战游戏</h2>
+            <p>射击敌机的飞行游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
+        
+        <div class="card" onclick="location.href='snake-evolution.html'">
+            <h2>贪食蛇进化版</h2>
+            <p>功能增强的贪食蛇游戏</p>
+            <button class="play-button">开始游戏</button>
+        </div>
     </div>
 </body>
 </html>

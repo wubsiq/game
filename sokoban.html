@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推箱子游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(10, 40px);
+            grid-gap: 1px;
+            margin: 20px 0;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+        .wall {
+            background-color: #795548;
+        }
+        .floor {
+            background-color: #e0e0e0;
+        }
+        .player {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .box {
+            background-color: #FF9800;
+            color: white;
+        }
+        .target {
+            background-color: #2196F3;
+            color: white;
+        }
+        .box-on-target {
+            background-color: #9C27B0;
+            color: white;
+        }
+        .player-on-target {
+            background-color: #00BCD4;
+            color: white;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>推箱子游戏</h1>
+    
+    <div class="game-info">
+        <div>步数: <span id="moves">0</span></div>
+        <div>目标: <span id="targets">0</span>/<span id="total-targets">0</span></div>
+    </div>
+    
+    <div class="game-board" id="board"></div>
+    
+    <div class="instructions">
+        <p>使用方向键移动玩家，将所有箱子推到目标位置。箱子只能推不能拉。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="newGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let board = [];
+        let playerPos = {x: 0, y: 0};
+        let moves = 0;
+        let targets = 0;
+        let totalTargets = 0;
+        let gameOver = false;
+        
+        // 关卡数据（简化版）
+        const levels = [
+            [
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 3, 0, 0, 0, 0, 3, 0, 1],
+                [1, 0, 0, 2, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 3, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+            ]
+        ];
+        
+        // 地图元素
+        const elements = {
+            0: 'floor',    // 空地
+            1: 'wall',     // 墙
+            2: 'player',   // 玩家
+            3: 'box',      // 箱子
+            4: 'target'    // 目标
+        };
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            moves = 0;
+            targets = 0;
+            gameOver = false;
+            
+            document.getElementById('moves').textContent = moves;
+            
+            // 加载关卡
+            const level = levels[0];
+            board = JSON.parse(JSON.stringify(level));
+            
+            // 找到玩家位置和统计目标
+            totalTargets = 0;
+            for (let i = 0; i < board.length; i++) {
+                for (let j = 0; j < board[i].length; j++) {
+                    if (board[i][j] === 2) {
+                        playerPos = {x: j, y: i};
+                        board[i][j] = 0; // 将玩家位置设为空地
+                    } else if (board[i][j] === 4) {
+                        totalTargets++;
+                    }
+                }
+            }
+            
+            document.getElementById('total-targets').textContent = totalTargets;
+            document.getElementById('targets').textContent = targets;
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < board.length; i++) {
+                for (let j = 0; j < board[i].length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    // 根据元素类型设置样式
+                    switch (board[i][j]) {
+                        case 0:
+                            cell.classList.add('floor');
+                            break;
+                        case 1:
+                            cell.classList.add('wall');
+                            break;
+                        case 3:
+                            cell.classList.add('box');
+                            cell.textContent = '📦';
+                            break;
+                        case 4:
+                            cell.classList.add('target');
+                            cell.textContent = '⭕';
+                            break;
+                    }
+                    
+                    // 检查是否是玩家位置
+                    if (playerPos.x === j && playerPos.y === i) {
+                        cell.classList.add('player');
+                        cell.textContent = '😊';
+                    }
+                    
+                    // 检查是否是箱子在目标上
+                    if (board[i][j] === 3 && isTarget(i, j)) {
+                        cell.classList.remove('box');
+                        cell.classList.add('box-on-target');
+                    }
+                    
+                    // 检查是否是玩家在目标上
+                    if (playerPos.x === j && playerPos.y === i && isTarget(i, j)) {
+                        cell.classList.remove('player');
+                        cell.classList.add('player-on-target');
+                    }
+                    
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        // 检查位置是否是目标
+        function isTarget(row, col) {
+            // 在这个简化版本中，我们没有在基础地图中存储目标位置
+            // 实际游戏中应该有一个单独的目标位置数组
+            // 这里我们模拟一些目标位置
+            const targetPositions = [
+                {row: 2, col: 3},
+                {row: 4, col: 5},
+                {row: 6, col: 7}
+            ];
+            
+            return targetPositions.some(pos => pos.row === row && pos.col === col);
+        }
+        
+        // 移动玩家
+        function movePlayer(dx, dy) {
+            if (gameOver) return;
+            
+            const newX = playerPos.x + dx;
+            const newY = playerPos.y + dy;
+            
+            // 检查边界
+            if (newY < 0 || newY >= board.length || newX < 0 || newX >= board[0].length) {
+                return;
+            }
+            
+            // 检查是否是墙
+            if (board[newY][newX] === 1) {
+                return;
+            }
+            
+            // 检查是否是箱子
+            if (board[newY][newX] === 3) {
+                const boxNewX = newX + dx;
+                const boxNewY = newY + dy;
+                
+                // 检查箱子是否可以移动
+                if (boxNewY < 0 || boxNewY >= board.length || boxNewX < 0 || boxNewX >= board[0].length) {
+                    return;
+                }
+                
+                if (board[boxNewY][boxNewX] === 1 || board[boxNewY][boxNewX] === 3) {
+                    return;
+                }
+                
+                // 移动箱子
+                board[boxNewY][boxNewX] = 3;
+                board[newY][newX] = 0;
+            }
+            
+            // 移动玩家
+            playerPos.x = newX;
+            playerPos.y = newY;
+            
+            // 增加步数
+            moves++;
+            document.getElementById('moves').textContent = moves;
+            
+            // 重新渲染
+            render();
+            
+            // 检查是否获胜
+            checkWin();
+        }
+        
+        // 检查是否获胜
+        function checkWin() {
+            // 统计在目标上的箱子数量
+            let boxesOnTarget = 0;
+            
+            for (let i = 0; i < board.length; i++) {
+                for (let j = 0; j < board[i].length; j++) {
+                    if (board[i][j] === 3 && isTarget(i, j)) {
+                        boxesOnTarget++;
+                    }
+                }
+            }
+            
+            targets = boxesOnTarget;
+            document.getElementById('targets').textContent = targets;
+            
+            // 如果所有目标都被箱子占据，获胜
+            if (targets === totalTargets && totalTargets > 0) {
+                gameOver = true;
+                setTimeout(() => {
+                    alert(`恭喜你完成推箱子！用了${moves}步。`);
+                }, 100);
+            }
+        }
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            switch (e.key) {
+                case 'ArrowUp':
+                    movePlayer(0, -1);
+                    e.preventDefault();
+                    break;
+                case 'ArrowDown':
+                    movePlayer(0, 1);
+                    e.preventDefault();
+                    break;
+                case 'ArrowLeft':
+                    movePlayer(-1, 0);
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    movePlayer(1, 0);
+                    e.preventDefault();
+                    break;
+            }
+        });
+        
+        // 新游戏
+        function newGame() {
+            initGame();
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

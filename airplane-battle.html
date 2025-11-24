@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞机大战游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background-color: #000;
+            overflow: hidden;
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        .player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #4CAF50;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            bottom: 20px;
+            left: 175px;
+        }
+        .enemy {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #f44336;
+            clip-path: polygon(50% 100%, 0% 0%, 100% 0%);
+        }
+        .bullet {
+            position: absolute;
+            width: 5px;
+            height: 15px;
+            background-color: #FFEB3B;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>飞机大战游戏</h1>
+    
+    <div class="game-info">
+        <div>分数: <span id="score">0</span></div>
+        <div>生命: <span id="lives">3</span></div>
+    </div>
+    
+    <div class="game-container" id="gameContainer">
+        <div class="player" id="player"></div>
+    </div>
+    
+    <div class="instructions">
+        <p>使用方向键移动飞机，空格键射击。击落敌机得分，被击中损失生命。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="startGame()">开始游戏</button>
+        <button class="btn" onclick="resetGame()">重置游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let score = 0;
+        let lives = 3;
+        let gameRunning = false;
+        let gameLoop;
+        let playerX = 175;
+        let playerY = 530;
+        let bullets = [];
+        let enemies = [];
+        let keys = {};
+        
+        // 获取游戏容器
+        const gameContainer = document.getElementById('gameContainer');
+        
+        // 初始化游戏
+        function initGame() {
+            score = 0;
+            lives = 3;
+            playerX = 175;
+            playerY = 530;
+            bullets = [];
+            enemies = [];
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            
+            // 清空游戏容器中的子弹和敌机
+            const elements = gameContainer.querySelectorAll('.bullet, .enemy');
+            elements.forEach(el => el.remove());
+            
+            // 更新玩家位置
+            updatePlayerPosition();
+        }
+        
+        // 更新玩家位置
+        function updatePlayerPosition() {
+            const player = document.getElementById('player');
+            player.style.left = playerX + 'px';
+            player.style.bottom = playerY + 'px';
+        }
+        
+        // 创建子弹
+        function createBullet() {
+            if (!gameRunning) return;
+            
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            bullet.style.left = (playerX + 22.5) + 'px';
+            bullet.style.bottom = (playerY + 50) + 'px';
+            
+            gameContainer.appendChild(bullet);
+            bullets.push({
+                element: bullet,
+                x: playerX + 22.5,
+                y: playerY + 50
+            });
+        }
+        
+        // 创建敌机
+        function createEnemy() {
+            if (!gameRunning) return;
+            
+            const enemyX = Math.random() * 360;
+            
+            const enemy = document.createElement('div');
+            enemy.className = 'enemy';
+            enemy.style.left = enemyX + 'px';
+            enemy.style.top = '0px';
+            
+            gameContainer.appendChild(enemy);
+            enemies.push({
+                element: enemy,
+                x: enemyX,
+                y: 0
+            });
+        }
+        
+        // 移动子弹
+        function moveBullets() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.y += 10;
+                bullet.element.style.bottom = bullet.y + 'px';
+                
+                // 移除超出屏幕的子弹
+                if (bullet.y > 600) {
+                    bullet.element.remove();
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+        
+        // 移动敌机
+        function moveEnemies() {
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                enemy.y += 3;
+                enemy.element.style.top = enemy.y + 'px';
+                
+                // 移除超出屏幕的敌机
+                if (enemy.y > 600) {
+                    enemy.element.remove();
+                    enemies.splice(i, 1);
+                    // 扣除生命
+                    lives--;
+                    document.getElementById('lives').textContent = lives;
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+        }
+        
+        // 检查碰撞
+        function checkCollisions() {
+            // 子弹与敌机碰撞
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    
+                    // 简单的碰撞检测
+                    if (
+                        bullet.x < enemy.x + 40 &&
+                        bullet.x + 5 > enemy.x &&
+                        bullet.y < enemy.y + 40 &&
+                        bullet.y + 15 > enemy.y
+                    ) {
+                        // 移除子弹和敌机
+                        bullet.element.remove();
+                        enemy.element.remove();
+                        bullets.splice(i, 1);
+                        enemies.splice(j, 1);
+                        
+                        // 增加分数
+                        score += 10;
+                        document.getElementById('score').textContent = score;
+                        
+                        break;
+                    }
+                }
+            }
+            
+            // 玩家与敌机碰撞
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // 简单的碰撞检测
+                if (
+                    playerX < enemy.x + 40 &&
+                    playerX + 50 > enemy.x &&
+                    playerY < enemy.y + 40 &&
+                    playerY + 50 > enemy.y
+                ) {
+                    // 移除敌机
+                    enemy.element.remove();
+                    enemies.splice(i, 1);
+                    
+                    // 扣除生命
+                    lives--;
+                    document.getElementById('lives').textContent = lives;
+                    
+                    if (lives <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+        }
+        
+        // 游戏主循环
+        function update() {
+            if (!gameRunning) return;
+            
+            // 移动玩家
+            if (keys['ArrowLeft'] && playerX > 0) {
+                playerX -= 5;
+            }
+            if (keys['ArrowRight'] && playerX < 350) {
+                playerX += 5;
+            }
+            if (keys['ArrowUp'] && playerY < 550) {
+                playerY += 5;
+            }
+            if (keys['ArrowDown'] && playerY > 0) {
+                playerY -= 5;
+            }
+            
+            updatePlayerPosition();
+            
+            // 移动子弹和敌机
+            moveBullets();
+            moveEnemies();
+            
+            // 检查碰撞
+            checkCollisions();
+        }
+        
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            setTimeout(() => {
+                alert(`游戏结束！得分: ${score}`);
+            }, 100);
+        }
+        
+        // 开始游戏
+        function startGame() {
+            if (gameRunning) return;
+            
+            initGame();
+            gameRunning = true;
+            
+            // 开始游戏循环
+            gameLoop = setInterval(update, 30);
+            
+            // 定期创建敌机
+            setInterval(() => {
+                if (gameRunning) {
+                    createEnemy();
+                }
+            }, 1000);
+            
+            // 定期射击
+            setInterval(() => {
+                if (gameRunning && keys[' ']) {
+                    createBullet();
+                }
+            }, 200);
+        }
+        
+        // 重置游戏
+        function resetGame() {
+            if (gameLoop) {
+                clearInterval(gameLoop);
+            }
+            gameRunning = false;
+            initGame();
+        }
+        
+        // 键盘事件
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            
+            // 空格键射击
+            if (e.key === ' ' && gameRunning) {
+                createBullet();
+                e.preventDefault();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // 退出到主页
+        function exitToHome() {
+            if (gameLoop) {
+                clearInterval(gameLoop);
+            }
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

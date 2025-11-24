@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华容道游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            grid-gap: 2px;
+            margin: 20px 0;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .piece {
+            width: 80px;
+            height: 80px;
+            background-color: #4CAF50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .piece:hover {
+            background-color: #45a049;
+        }
+        .piece.empty {
+            background-color: #f0f0f0;
+        }
+        .piece.horiz-2 {
+            grid-column: span 2;
+            width: 162px;
+        }
+        .piece.vert-2 {
+            grid-row: span 2;
+            height: 162px;
+        }
+        .piece.square-2 {
+            grid-column: span 2;
+            grid-row: span 2;
+            width: 162px;
+            height: 162px;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>华容道游戏</h1>
+    
+    <div class="game-info">
+        <div>步数: <span id="moves">0</span></div>
+        <div>时间: <span id="timer">0</span>s</div>
+    </div>
+    
+    <div class="game-board" id="board"></div>
+    
+    <div class="instructions">
+        <p>移动方块，将曹操（最大的方块）移动到出口（底部中央位置）。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="newGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let board = [];
+        let moves = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let gameStarted = false;
+        let gameOver = false;
+        
+        // 华容道初始布局（简化版）
+        const initialBoard = [
+            {id: 1, name: '关羽', type: 'vert-2'},
+            {id: 2, name: '张飞', type: 'vert-2'},
+            {id: 3, name: '赵云', type: 'vert-2'},
+            {id: 4, name: '马超', type: 'vert-2'},
+            {id: 5, name: '黄忠', type: 'horiz-2'},
+            {id: 6, name: '兵', type: 'piece'},
+            {id: 7, name: '兵', type: 'piece'},
+            {id: 8, name: '兵', type: 'piece'},
+            {id: 9, name: '兵', type: 'piece'},
+            {id: 10, name: '曹操', type: 'square-2'},
+            {id: 0, name: '', type: 'empty'},
+            {id: 0, name: '', type: 'empty'}
+        ];
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            moves = 0;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('timer').textContent = '0';
+            gameOver = false;
+            gameStarted = false;
+            
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // 初始化游戏板
+            board = [
+                [1, 2, 3, 4],
+                [1, 2, 3, 4],
+                [5, 5, 6, 7],
+                [8, 9, 10, 10],
+                [8, 9, 10, 10],
+                [0, 0, 0, 0]
+            ];
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            // 创建一个映射来跟踪已添加的块
+            const addedPieces = new Set();
+            
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 4; j++) {
+                    const pieceId = board[i][j];
+                    
+                    // 跳过已经处理过的块（对于跨越多个单元格的块）
+                    if (addedPieces.has(`${i}-${j}`)) continue;
+                    
+                    const pieceInfo = initialBoard.find(p => p.id === pieceId);
+                    if (!pieceInfo) continue;
+                    
+                    const piece = document.createElement('div');
+                    piece.className = `piece ${pieceInfo.type}`;
+                    piece.dataset.row = i;
+                    piece.dataset.col = j;
+                    piece.textContent = pieceInfo.name;
+                    
+                    if (pieceInfo.type === 'empty') {
+                        piece.classList.add('empty');
+                    }
+                    
+                    // 标记已添加的块
+                    if (pieceInfo.type === 'horiz-2') {
+                        addedPieces.add(`${i}-${j}`);
+                        addedPieces.add(`${i}-${j+1}`);
+                    } else if (pieceInfo.type === 'vert-2') {
+                        addedPieces.add(`${i}-${j}`);
+                        addedPieces.add(`${i+1}-${j}`);
+                    } else if (pieceInfo.type === 'square-2') {
+                        addedPieces.add(`${i}-${j}`);
+                        addedPieces.add(`${i}-${j+1}`);
+                        addedPieces.add(`${i+1}-${j}`);
+                        addedPieces.add(`${i+1}-${j+1}`);
+                    } else {
+                        addedPieces.add(`${i}-${j}`);
+                    }
+                    
+                    // 添加点击事件
+                    piece.addEventListener('click', () => movePiece(i, j));
+                    
+                    boardElement.appendChild(piece);
+                }
+            }
+        }
+        
+        // 移动方块
+        function movePiece(row, col) {
+            if (gameOver) return;
+            
+            // 如果游戏未开始，开始计时
+            if (!gameStarted) {
+                gameStarted = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+            
+            const pieceId = board[row][col];
+            if (pieceId === 0) return; // 空位置不能移动
+            
+            const pieceInfo = initialBoard.find(p => p.id === pieceId);
+            if (!pieceInfo) return;
+            
+            // 检查可能的移动方向
+            const directions = [];
+            
+            // 检查上方
+            if (row > 0 && canMoveTo(row - 1, col, pieceId)) {
+                directions.push({dr: -1, dc: 0});
+            }
+            
+            // 检查下方
+            if (row < 5 && canMoveTo(row + 1, col, pieceId)) {
+                directions.push({dr: 1, dc: 0});
+            }
+            
+            // 检查左侧
+            if (col > 0 && canMoveTo(row, col - 1, pieceId)) {
+                directions.push({dr: 0, dc: -1});
+            }
+            
+            // 检查右侧
+            if (col < 3 && canMoveTo(row, col + 1, pieceId)) {
+                directions.push({dr: 0, dc: 1});
+            }
+            
+            // 如果有可移动的方向，选择第一个方向移动
+            if (directions.length > 0) {
+                const dir = directions[0];
+                movePieceInDirection(row, col, dir.dr, dir.dc, pieceId, pieceInfo.type);
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                
+                // 检查是否获胜
+                checkWin();
+            }
+        }
+        
+        // 检查是否可以移动到指定位置
+        function canMoveTo(row, col, pieceId) {
+            return board[row][col] === 0;
+        }
+        
+        // 在指定方向移动方块
+        function movePieceInDirection(row, col, dr, dc, pieceId, pieceType) {
+            // 根据方块类型移动
+            if (pieceType === 'piece') {
+                // 单元格方块
+                board[row][col] = 0;
+                board[row + dr][col + dc] = pieceId;
+            } else if (pieceType === 'horiz-2') {
+                // 水平方块（2格宽）
+                if (dc !== 0) {
+                    // 水平移动
+                    board[row][col] = 0;
+                    board[row][col + 1] = 0;
+                    board[row][col + dc] = pieceId;
+                    board[row][col + 1 + dc] = pieceId;
+                } else {
+                    // 垂直移动
+                    board[row][col] = 0;
+                    board[row][col + 1] = 0;
+                    board[row + dr][col] = pieceId;
+                    board[row + dr][col + 1] = pieceId;
+                }
+            } else if (pieceType === 'vert-2') {
+                // 垂直方块（2格高）
+                if (dr !== 0) {
+                    // 垂直移动
+                    board[row][col] = 0;
+                    board[row + 1][col] = 0;
+                    board[row + dr][col] = pieceId;
+                    board[row + 1 + dr][col] = pieceId;
+                } else {
+                    // 水平移动
+                    board[row][col] = 0;
+                    board[row + 1][col] = 0;
+                    board[row][col + dc] = pieceId;
+                    board[row + 1][col + dc] = pieceId;
+                }
+            } else if (pieceType === 'square-2') {
+                // 正方形块（2x2）
+                board[row][col] = 0;
+                board[row][col + 1] = 0;
+                board[row + 1][col] = 0;
+                board[row + 1][col + 1] = 0;
+                
+                board[row + dr][col + dc] = pieceId;
+                board[row + dr][col + 1 + dc] = pieceId;
+                board[row + 1 + dr][col + dc] = pieceId;
+                board[row + 1 + dr][col + 1 + dc] = pieceId;
+            }
+            
+            // 重新渲染
+            render();
+        }
+        
+        // 检查是否获胜
+        function checkWin() {
+            // 检查曹操（id=10）是否在底部中央位置
+            if (board[4][1] === 10 && board[4][2] === 10 && 
+                board[5][1] === 10 && board[5][2] === 10) {
+                gameOver = true;
+                clearInterval(timerInterval);
+                setTimeout(() => {
+                    alert(`恭喜你完成华容道！用了${moves}步，耗时${document.getElementById('timer').textContent}秒。`);
+                }, 100);
+            }
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            if (gameStarted && !gameOver) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').textContent = elapsed;
+            }
+        }
+        
+        // 新游戏
+        function newGame() {
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            initGame();
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

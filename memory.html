@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>记忆翻牌游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .memory-board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-gap: 10px;
+            margin: 20px 0;
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .card.flipped {
+            background-color: #2196F3;
+            transform: rotateY(180deg);
+        }
+        .card.matched {
+            background-color: #FF9800;
+            cursor: default;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>记忆翻牌游戏</h1>
+    
+    <div class="game-info">
+        <div>步数: <span id="moves">0</span></div>
+        <div>配对: <span id="matches">0</span>/8</div>
+    </div>
+    
+    <div class="memory-board" id="board"></div>
+    
+    <div class="instructions">
+        <p>点击翻牌，找到所有匹配的图案对。每次只能翻两张牌。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="initGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let gameOver = false;
+        
+        // 图案数组
+        const symbols = ['🍎', '🍌', '🍇', '🍊', '🍓', '🍒', '🍑', '🍍'];
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            gameOver = false;
+            
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('matches').textContent = matchedPairs;
+            
+            // 创建卡片数组（每种图案两张）
+            cards = [];
+            for (let i = 0; i < 8; i++) {
+                cards.push(symbols[i]);
+                cards.push(symbols[i]);
+            }
+            
+            // 打乱卡片
+            shuffleCards();
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 打乱卡片
+        function shuffleCards() {
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cards[i], cards[j]] = [cards[j], cards[i]];
+            }
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            for (let i = 0; i < 16; i++) {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.index = i;
+                
+                // 添加点击事件
+                card.addEventListener('click', () => flipCard(i));
+                
+                board.appendChild(card);
+            }
+        }
+        
+        // 翻牌
+        function flipCard(index) {
+            // 如果游戏结束、已经翻了两张牌、点击的牌已经翻开了或已经匹配了，则不执行任何操作
+            if (gameOver || flippedCards.length === 2 || 
+                document.querySelector(`.card[data-index="${index}"]`).classList.contains('flipped') ||
+                document.querySelector(`.card[data-index="${index}"]`).classList.contains('matched')) {
+                return;
+            }
+            
+            // 翻开点击的牌
+            const card = document.querySelector(`.card[data-index="${index}"]`);
+            card.classList.add('flipped');
+            card.textContent = cards[index];
+            
+            // 将翻开的牌添加到数组中
+            flippedCards.push({index, symbol: cards[index]});
+            
+            // 如果翻开了两张牌，检查是否匹配
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                
+                setTimeout(() => {
+                    checkMatch();
+                }, 1000);
+            }
+        }
+        
+        // 检查是否匹配
+        function checkMatch() {
+            const card1 = flippedCards[0];
+            const card2 = flippedCards[1];
+            
+            // 如果匹配
+            if (card1.symbol === card2.symbol) {
+                // 标记为已匹配
+                document.querySelector(`.card[data-index="${card1.index}"]`).classList.add('matched');
+                document.querySelector(`.card[data-index="${card2.index}"]`).classList.add('matched');
+                
+                // 增加匹配对数
+                matchedPairs++;
+                document.getElementById('matches').textContent = matchedPairs;
+                
+                // 检查是否获胜
+                if (matchedPairs === 8) {
+                    gameOver = true;
+                    setTimeout(() => {
+                        alert(`恭喜你获胜了！用了${moves}步。`);
+                    }, 100);
+                }
+            } else {
+                // 如果不匹配，翻回去
+                document.querySelector(`.card[data-index="${card1.index}"]`).classList.remove('flipped');
+                document.querySelector(`.card[data-index="${card1.index}"]`).textContent = '';
+                document.querySelector(`.card[data-index="${card2.index}"]`).classList.remove('flipped');
+                document.querySelector(`.card[data-index="${card2.index}"]`).textContent = '';
+            }
+            
+            // 清空翻开的牌数组
+            flippedCards = [];
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

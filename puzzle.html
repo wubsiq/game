@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼图游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .puzzle-container {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin: 20px 0;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .puzzle-piece {
+            width: 100px;
+            height: 100px;
+            background-color: #4CAF50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .puzzle-piece:hover {
+            background-color: #45a049;
+        }
+        .empty {
+            background-color: #f0f0f0;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>拼图游戏</h1>
+    
+    <div class="game-info">
+        <div>步数: <span id="moves">0</span></div>
+        <div>时间: <span id="timer">0</span>s</div>
+    </div>
+    
+    <div class="puzzle-container" id="puzzle"></div>
+    
+    <div class="instructions">
+        <p>点击与空白格相邻的数字块来移动它们，将数字按顺序排列即获胜。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="initGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let puzzle = [];
+        let emptyIndex = 8; // 空白格的索引（从0开始）
+        let moves = 0;
+        let startTime = null;
+        let timerInterval = null;
+        let gameStarted = false;
+        let gameOver = false;
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            moves = 0;
+            document.getElementById('moves').textContent = moves;
+            document.getElementById('timer').textContent = '0';
+            gameOver = false;
+            gameStarted = false;
+            
+            // 清除计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            
+            // 创建初始拼图（1-8，最后一个为空白）
+            puzzle = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+            emptyIndex = 8;
+            
+            // 打乱拼图
+            shufflePuzzle();
+            
+            // 渲染拼图
+            render();
+        }
+        
+        // 打乱拼图
+        function shufflePuzzle() {
+            // 进行1000次随机移动来打乱拼图
+            for (let i = 0; i < 1000; i++) {
+                const neighbors = getNeighbors(emptyIndex);
+                const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+                swap(emptyIndex, randomNeighbor);
+                emptyIndex = randomNeighbor;
+            }
+            
+            // 重置步数
+            moves = 0;
+        }
+        
+        // 获取相邻的格子索引
+        function getNeighbors(index) {
+            const neighbors = [];
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            
+            // 上
+            if (row > 0) neighbors.push(index - 3);
+            // 下
+            if (row < 2) neighbors.push(index + 3);
+            // 左
+            if (col > 0) neighbors.push(index - 1);
+            // 右
+            if (col < 2) neighbors.push(index + 1);
+            
+            return neighbors;
+        }
+        
+        // 交换两个格子
+        function swap(index1, index2) {
+            const temp = puzzle[index1];
+            puzzle[index1] = puzzle[index2];
+            puzzle[index2] = temp;
+        }
+        
+        // 渲染拼图
+        function render() {
+            const container = document.getElementById('puzzle');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'puzzle-piece';
+                piece.dataset.index = i;
+                
+                if (puzzle[i] === 0) {
+                    piece.classList.add('empty');
+                } else {
+                    piece.textContent = puzzle[i];
+                    piece.addEventListener('click', () => movePiece(i));
+                }
+                
+                container.appendChild(piece);
+            }
+        }
+        
+        // 移动拼图块
+        function movePiece(index) {
+            if (gameOver) return;
+            
+            // 如果游戏未开始，开始计时
+            if (!gameStarted) {
+                gameStarted = true;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 1000);
+            }
+            
+            // 检查是否与空白格相邻
+            const neighbors = getNeighbors(emptyIndex);
+            if (neighbors.includes(index)) {
+                // 交换点击的块和空白格
+                swap(index, emptyIndex);
+                emptyIndex = index;
+                moves++;
+                document.getElementById('moves').textContent = moves;
+                
+                // 重新渲染
+                render();
+                
+                // 检查是否获胜
+                checkWin();
+            }
+        }
+        
+        // 检查是否获胜
+        function checkWin() {
+            // 检查是否按顺序排列（最后一个是空白格）
+            for (let i = 0; i < 8; i++) {
+                if (puzzle[i] !== i + 1) {
+                    return;
+                }
+            }
+            
+            // 检查最后一个是否为空白
+            if (puzzle[8] === 0) {
+                gameOver = true;
+                clearInterval(timerInterval);
+                setTimeout(() => {
+                    alert(`恭喜你获胜了！用了${moves}步，耗时${document.getElementById('timer').textContent}秒。`);
+                }, 100);
+            }
+        }
+        
+        // 更新计时器
+        function updateTimer() {
+            if (gameStarted && !gameOver) {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').textContent = elapsed;
+            }
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

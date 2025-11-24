@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跳一跳游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .game-container {
+            position: relative;
+            width: 400px;
+            height: 500px;
+            background-color: #e0e0e0;
+            overflow: hidden;
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        .player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            bottom: 50px;
+            left: 50px;
+            transition: bottom 0.3s;
+        }
+        .platform {
+            position: absolute;
+            height: 20px;
+            background-color: #795548;
+        }
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>跳一跳游戏</h1>
+    
+    <div class="game-info">
+        <div>分数: <span id="score">0</span></div>
+        <div>最高分: <span id="high-score">0</span></div>
+    </div>
+    
+    <div class="game-container" id="gameContainer">
+        <div class="score-display" id="scoreDisplay">0</div>
+        <div class="player" id="player"></div>
+    </div>
+    
+    <div class="instructions">
+        <p>按住空格键蓄力，松开跳跃。跳到平台上得分，掉下去游戏结束。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="startGame()">开始游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let score = 0;
+        let highScore = localStorage.getItem('jumpHighScore') || 0;
+        let gameRunning = false;
+        let playerY = 50;
+        let playerX = 50;
+        let velocityY = 0;
+        let gravity = 0.5;
+        let isCharging = false;
+        let chargePower = 0;
+        let platforms = [];
+        let gameLoop;
+        let platformSpeed = 2;
+        
+        // 更新最高分显示
+        document.getElementById('high-score').textContent = highScore;
+        
+        // 初始化游戏
+        function initGame() {
+            score = 0;
+            playerY = 50;
+            playerX = 50;
+            velocityY = 0;
+            isCharging = false;
+            chargePower = 0;
+            platforms = [];
+            
+            document.getElementById('score').textContent = score;
+            document.getElementById('scoreDisplay').textContent = score;
+            
+            const gameContainer = document.getElementById('gameContainer');
+            
+            // 清空平台
+            const existingPlatforms = gameContainer.querySelectorAll('.platform');
+            existingPlatforms.forEach(platform => platform.remove());
+            
+            // 创建初始平台
+            createPlatform(0, 400, 100);
+            createPlatform(150, 350, 80);
+            createPlatform(280, 300, 120);
+            
+            // 更新玩家位置
+            updatePlayerPosition();
+        }
+        
+        // 创建平台
+        function createPlatform(x, y, width) {
+            const platform = document.createElement('div');
+            platform.className = 'platform';
+            platform.style.left = x + 'px';
+            platform.style.bottom = y + 'px';
+            platform.style.width = width + 'px';
+            
+            document.getElementById('gameContainer').appendChild(platform);
+            platforms.push({element: platform, x, y, width});
+        }
+        
+        // 更新玩家位置
+        function updatePlayerPosition() {
+            const player = document.getElementById('player');
+            player.style.bottom = playerY + 'px';
+            player.style.left = playerX + 'px';
+        }
+        
+        // 跳跃
+        function jump() {
+            if (!gameRunning) return;
+            
+            velocityY = -chargePower * 0.3;
+            isCharging = false;
+            chargePower = 0;
+        }
+        
+        // 检查碰撞
+        function checkCollision() {
+            // 检查是否落到平台上
+            for (const platform of platforms) {
+                if (
+                    playerY <= platform.y + 20 && 
+                    playerY >= platform.y &&
+                    playerX + 30 >= platform.x && 
+                    playerX <= platform.x + platform.width
+                ) {
+                    // 落到平台上
+                    playerY = platform.y + 20;
+                    velocityY = 0;
+                    score++;
+                    document.getElementById('score').textContent = score;
+                    document.getElementById('scoreDisplay').textContent = score;
+                    
+                    // 更新最高分
+                    if (score > highScore) {
+                        highScore = score;
+                        localStorage.setItem('jumpHighScore', highScore);
+                        document.getElementById('high-score').textContent = highScore;
+                    }
+                    
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // 游戏主循环
+        function update() {
+            if (!gameRunning) return;
+            
+            // 蓄力
+            if (isCharging) {
+                chargePower += 1;
+                if (chargePower > 30) chargePower = 30;
+            }
+            
+            // 应用重力
+            velocityY += gravity;
+            playerY += velocityY;
+            
+            // 检查碰撞
+            checkCollision();
+            
+            // 检查是否掉下去
+            if (playerY > 500) {
+                gameOver();
+                return;
+            }
+            
+            // 移动平台
+            for (let i = platforms.length - 1; i >= 0; i--) {
+                const platform = platforms[i];
+                platform.x -= platformSpeed;
+                platform.element.style.left = platform.x + 'px';
+                
+                // 移除超出屏幕的平台
+                if (platform.x + platform.width < 0) {
+                    platform.element.remove();
+                    platforms.splice(i, 1);
+                }
+            }
+            
+            // 添加新平台
+            if (platforms.length < 5) {
+                const lastPlatform = platforms[platforms.length - 1];
+                const newX = lastPlatform.x + lastPlatform.width + Math.random() * 100 + 50;
+                const newY = Math.random() * 200 + 200;
+                const newWidth = Math.random() * 50 + 50;
+                createPlatform(newX, newY, newWidth);
+            }
+            
+            // 更新玩家位置
+            updatePlayerPosition();
+        }
+        
+        // 游戏结束
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(gameLoop);
+            setTimeout(() => {
+                alert(`游戏结束！得分: ${score}`);
+            }, 100);
+        }
+        
+        // 开始游戏
+        function startGame() {
+            if (gameRunning) return;
+            
+            initGame();
+            gameRunning = true;
+            gameLoop = setInterval(update, 30);
+        }
+        
+        // 键盘事件
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                if (!isCharging && gameRunning) {
+                    isCharging = true;
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                if (isCharging) {
+                    jump();
+                }
+            }
+        });
+        
+        // 退出到主页
+        function exitToHome() {
+            if (gameLoop) {
+                clearInterval(gameLoop);
+            }
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

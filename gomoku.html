@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .gomoku-board {
+            display: grid;
+            grid-template-columns: repeat(15, 30px);
+            grid-gap: 0;
+            margin: 20px 0;
+            background-color: #DEB887;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #DEB887;
+            position: relative;
+            cursor: pointer;
+        }
+        .cell::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: #000;
+        }
+        .cell::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #000;
+        }
+        .stone {
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            top: 1px;
+            left: 1px;
+            z-index: 1;
+        }
+        .black {
+            background-color: #000;
+        }
+        .white {
+            background-color: #fff;
+            border: 1px solid #000;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>五子棋游戏</h1>
+    
+    <div class="game-info" id="status">黑棋先行</div>
+    
+    <div class="gomoku-board" id="board"></div>
+    
+    <div class="instructions">
+        <p>黑白双方轮流落子，率先在横、竖或斜方向连成五子者获胜。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="newGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let board = [];
+        let currentPlayer = 'black'; // black 或 white
+        let gameOver = false;
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            board = Array(15).fill().map(() => Array(15).fill(0));
+            currentPlayer = 'black';
+            gameOver = false;
+            
+            document.getElementById('status').textContent = '黑棋先行';
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < 15; i++) {
+                for (let j = 0; j < 15; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // 如果有棋子，添加棋子
+                    if (board[i][j] !== 0) {
+                        const stone = document.createElement('div');
+                        stone.className = `stone ${board[i][j]}`;
+                        cell.appendChild(stone);
+                    }
+                    
+                    // 添加点击事件
+                    cell.addEventListener('click', () => placeStone(i, j));
+                    
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+        
+        // 放置棋子
+        function placeStone(row, col) {
+            // 如果游戏结束或该位置已有棋子，则不处理
+            if (gameOver || board[row][col] !== 0) {
+                return;
+            }
+            
+            // 放置棋子
+            board[row][col] = currentPlayer;
+            
+            // 检查是否获胜
+            if (checkWin(row, col)) {
+                gameOver = true;
+                document.getElementById('status').textContent = `${currentPlayer === 'black' ? '黑棋' : '白棋'}获胜！`;
+                setTimeout(() => {
+                    alert(`${currentPlayer === 'black' ? '黑棋' : '白棋'}获胜！`);
+                }, 100);
+            } else {
+                // 切换玩家
+                currentPlayer = currentPlayer === 'black' ? 'white' : 'black';
+                document.getElementById('status').textContent = `${currentPlayer === 'black' ? '黑棋' : '白棋'}落子`;
+            }
+            
+            // 重新渲染
+            render();
+        }
+        
+        // 检查是否获胜
+        function checkWin(row, col) {
+            const player = board[row][col];
+            if (!player) return false;
+            
+            // 检查四个方向：水平、垂直、对角线1、对角线2
+            const directions = [
+                [0, 1],  // 水平
+                [1, 0],  // 垂直
+                [1, 1],  // 对角线1
+                [1, -1]  // 对角线2
+            ];
+            
+            for (const [dx, dy] of directions) {
+                let count = 1; // 包括当前棋子
+                
+                // 正方向检查
+                for (let i = 1; i < 5; i++) {
+                    const newRow = row + dx * i;
+                    const newCol = col + dy * i;
+                    
+                    if (newRow >= 0 && newRow < 15 && newCol >= 0 && newCol < 15 && 
+                        board[newRow][newCol] === player) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // 反方向检查
+                for (let i = 1; i < 5; i++) {
+                    const newRow = row - dx * i;
+                    const newCol = col - dy * i;
+                    
+                    if (newRow >= 0 && newRow < 15 && newCol >= 0 && newCol < 15 && 
+                        board[newRow][newCol] === player) {
+                        count++;
+                    } else {
+                        break;
+                    }
+                }
+                
+                // 如果连成五子，获胜
+                if (count >= 5) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // 新游戏
+        function newGame() {
+            initGame();
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连连看游戏</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(8, 50px);
+            grid-gap: 2px;
+            margin: 20px 0;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .tile {
+            width: 50px;
+            height: 50px;
+            background-color: #4CAF50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .tile:hover {
+            background-color: #45a049;
+        }
+        .tile.selected {
+            background-color: #2196F3;
+        }
+        .tile.matched {
+            background-color: #FF9800;
+            opacity: 0.5;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .exit-btn {
+            background-color: #f44336;
+        }
+        .exit-btn:hover {
+            background-color: #d32f2f;
+        }
+        .instructions {
+            max-width: 500px;
+            text-align: center;
+            margin: 20px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>连连看游戏</h1>
+    
+    <div class="game-info">
+        <div>分数: <span id="score">0</span></div>
+        <div>剩余: <span id="remaining">0</span></div>
+    </div>
+    
+    <div class="game-board" id="board"></div>
+    
+    <div class="instructions">
+        <p>点击两个相同的图案，如果它们可以通过不超过两个转弯的线连接，则会消除。</p>
+    </div>
+    
+    <div class="controls">
+        <button class="btn" onclick="newGame()">新游戏</button>
+        <button class="btn exit-btn" onclick="exitToHome()">退出游戏</button>
+    </div>
+
+    <script>
+        // 游戏变量
+        let board = [];
+        let symbols = [];
+        let selectedTile = null;
+        let score = 0;
+        let totalPairs = 0;
+        
+        // 图案数组
+        const iconSymbols = ['🍎', '🍌', '🍇', '🍊', '🍓', '🍒', '🍑', '🍍', '🥝', '🍉'];
+        
+        // 初始化游戏
+        function initGame() {
+            // 重置游戏状态
+            score = 0;
+            document.getElementById('score').textContent = score;
+            selectedTile = null;
+            
+            // 初始化游戏板 (8x8)
+            board = Array(8).fill().map(() => Array(8).fill(0));
+            
+            // 创建图案对
+            symbols = [];
+            for (let i = 0; i < 10; i++) {
+                symbols.push(iconSymbols[i]);
+                symbols.push(iconSymbols[i]);
+            }
+            
+            // 打乱图案
+            shuffleArray(symbols);
+            
+            // 填充游戏板
+            let index = 0;
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    board[i][j] = symbols[index++];
+                }
+            }
+            
+            // 计算总对数
+            totalPairs = symbols.length / 2;
+            document.getElementById('remaining').textContent = totalPairs;
+            
+            // 渲染游戏板
+            render();
+        }
+        
+        // 打乱数组
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+        
+        // 渲染游戏板
+        function render() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile';
+                    tile.dataset.row = i;
+                    tile.dataset.col = j;
+                    tile.textContent = board[i][j];
+                    
+                    // 添加点击事件
+                    tile.addEventListener('click', () => selectTile(i, j));
+                    
+                    boardElement.appendChild(tile);
+                }
+            }
+        }
+        
+        // 选择瓷砖
+        function selectTile(row, col) {
+            // 如果点击的是空位置，不处理
+            if (board[row][col] === 0) return;
+            
+            const tile = document.querySelector(`.tile[data-row="${row}"][data-col="${col}"]`);
+            
+            // 如果已经选择了一个瓷砖
+            if (selectedTile) {
+                // 如果点击的是同一个瓷砖，取消选择
+                if (selectedTile.row === row && selectedTile.col === col) {
+                    tile.classList.remove('selected');
+                    selectedTile = null;
+                    return;
+                }
+                
+                // 如果两个瓷砖图案相同，检查是否可以连接
+                if (board[selectedTile.row][selectedTile.col] === board[row][col]) {
+                    if (canConnect(selectedTile.row, selectedTile.col, row, col)) {
+                        // 消除两个瓷砖
+                        eliminateTiles(selectedTile.row, selectedTile.col, row, col);
+                        
+                        // 增加分数
+                        score += 10;
+                        document.getElementById('score').textContent = score;
+                        
+                        // 减少剩余对数
+                        totalPairs--;
+                        document.getElementById('remaining').textContent = totalPairs;
+                        
+                        // 检查是否完成
+                        if (totalPairs === 0) {
+                            setTimeout(() => {
+                                alert(`恭喜你完成连连看！最终得分: ${score}`);
+                            }, 100);
+                        }
+                    }
+                }
+                
+                // 取消之前的选择
+                document.querySelector(`.tile[data-row="${selectedTile.row}"][data-col="${selectedTile.col}"]`).classList.remove('selected');
+                selectedTile = null;
+            } else {
+                // 选择新瓷砖
+                tile.classList.add('selected');
+                selectedTile = {row, col};
+            }
+        }
+        
+        // 检查两个瓷砖是否可以连接（简化版，只检查直线连接）
+        function canConnect(row1, col1, row2, col2) {
+            // 检查是否在同一行
+            if (row1 === row2) {
+                const minCol = Math.min(col1, col2);
+                const maxCol = Math.max(col1, col2);
+                
+                // 检查中间是否有障碍物
+                for (let col = minCol + 1; col < maxCol; col++) {
+                    if (board[row1][col] !== 0) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            // 检查是否在同一列
+            if (col1 === col2) {
+                const minRow = Math.min(row1, row2);
+                const maxRow = Math.max(row1, row2);
+                
+                // 检查中间是否有障碍物
+                for (let row = minRow + 1; row < maxRow; row++) {
+                    if (board[row][col1] !== 0) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // 消除两个瓷砖
+        function eliminateTiles(row1, col1, row2, col2) {
+            // 清除瓷砖内容
+            board[row1][col1] = 0;
+            board[row2][col2] = 0;
+            
+            // 更新显示
+            document.querySelector(`.tile[data-row="${row1}"][data-col="${col1}"]`).textContent = '';
+            document.querySelector(`.tile[data-row="${row2}"][data-col="${col2}"]`).textContent = '';
+            
+            // 添加消除样式
+            document.querySelector(`.tile[data-row="${row1}"][data-col="${col1}"]`).classList.add('matched');
+            document.querySelector(`.tile[data-row="${row2}"][data-col="${col2}"]`).classList.add('matched');
+        }
+        
+        // 新游戏
+        function newGame() {
+            initGame();
+        }
+        
+        // 退出到主页
+        function exitToHome() {
+            window.location.href = 'index.html';
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
